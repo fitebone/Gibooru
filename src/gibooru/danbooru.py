@@ -1,31 +1,86 @@
 from datetime import datetime
-from .booru import Gibooru
-from typing import Optional
+from gibooru import Gibooru
+from typing import Optional, List
 from pydantic import BaseModel, HttpUrl, validator
-import os
+from httpx import Response, URL
+import re
 
 class Danbooru(Gibooru):
+    '''Danbooru API client'''
     def __init__(self):
-        self.api_base = 'https://danbooru.donmai.us'
+        self.api_base = 'https://danbooru.donmai.us/'
         self.ext = '.json'
+        self.page_urls = []
+        self.last_query = ''
+        self.page_urls_amount = 20
         super().__init__()
-    
-    async def get_post(self, id: Optional[int] = None):
-        api = 'posts'
-        path = ''
-        if id:
-            path = 'random'
-        else:
-            path = '{id}'
-        endpoint = os.path.join(self.api_base, api, path) + self.ext
-        return await self.client.build_request('GET', endpoint)
+      
+    async def get_post(self, id: Optional[int] = None) -> Response:
+        '''Searches for a single post from Danbooru
+        
+        Parameters
+        ----------
+        id: Optional[int]
+            The id of the post, if not given a random post will be found
+        '''
 
-    async def get_posts(self, query: Optional[str] = None):
-        api = 'posts' + self.ext
-        if query:
-            api += '?tags={query}'
-        path = os.path.join(self.api_base, api)
-        return await self.client.build_request('GET', path)
+        endpoint = self.api_base + 'posts/'
+        if id:
+            endpoint += '{}'.format(id)
+        else:
+            endpoint += 'random'
+        endpoint += self.ext
+        self.last_query = endpoint
+        return await self.client.get(endpoint)
+
+    async def get_posts(self, page: Optional[int] = 1, tags: Optional[str] = None) -> Response:
+        endpoint = self.api_base + 'posts' + self.ext + '?'
+        data = {'page': page, 'tags': tags}
+        params = {}
+        for k, v in data.items():
+            if v:
+                params[k] = v
+        response = await self.client.get(endpoint, params=params)
+        query = response.url.query.decode('utf-8')
+        self.page_urls = self._update_urls(endpoint, query, page, self.page_urls_amount)
+        self.last_query = endpoint + query
+        return response
+    
+    async def search_tags(self,
+        page: Optional[int] = 1,
+        name: Optional[str] = None,
+        order: Optional[str] = 'date',
+        hide_empty: Optional[bool] = True,
+        category: Optional[int] = None,
+        has_artist: Optional[bool] = None,
+        has_wiki_page: Optional[bool] = None
+        ):
+        endpoint = self.api_base + 'tags' + self.ext + '?'
+        data = {
+            'commit': 'Search', 
+            'page': page, 
+            'search[name_or_alias_matches]': name,
+            'search[order]': order, 
+            'search[hide_empty]': hide_empty, 
+            'search[category]': category,
+            'search[has_artist]': has_artist,
+            'search[has_wiki_page]': has_wiki_page,
+            }
+        params = {}
+        for k, v in data.items():
+            if v:
+                params[k] = v
+        response = await self.client.get(endpoint, params=params)
+        query = response.url.query.decode('utf-8')
+        self.page_urls = self._update_urls(endpoint, query, page, self.page_urls_amount)
+        self.last_query = endpoint + query
+        return response
+
+    def _update_urls(self, endpoint: str, query: str, base_page: int, pages: int) -> List[str]:
+        return list(endpoint + re.sub('page=\d*&', 'page={}&'.format(page), query) for page in range(base_page, base_page+pages))
+
+    
+
 
 class DanbooruImage(BaseModel):
     id: int
@@ -93,3 +148,38 @@ class DanbooruImage(BaseModel):
     )
     def check_tags(cls, v):
         return v.split(' ')
+
+# Utility Methods
+def handle_response_code(self, code: int):
+    reply, message = ()
+    if code == 200:
+        reply, message = ('OK', 'Request was successful')
+    elif code == 204:
+        reply, message = ('No Content', 'Request was successful')
+    elif code == 400:
+        reply, message = ('Bad Request', 'The given parameters could not be parsed')
+    elif code == 401:
+        reply, message = ('Unauthorized', 'Authentication failed')
+    elif code == 404:
+        reply, message = ('Not found', 'Not found')
+    elif code == 410:
+        reply, message = ('Gone', 'Pagination limit')
+    elif code == 420:
+        reply, message = ('Invalid Record', 'Record could not be saved')
+    elif code == 422:
+        reply, message = ('Locked', 'The resource is locked and cannot be modified')
+    elif code == 423:
+        reply, message = ('Already Exists', 'Resource already exists')
+    elif code == 424:
+        reply, message = ('Invalid Parameters', 'The given parameters were invalid')
+    elif code == 429:
+        reply, message = ('User Throttled', 'User is throttled, try again later')
+    elif code == 500:
+        reply, message = ('Internal Server Error', 'A database timeout, or some unknown error occurred on the server')
+    elif code == 502:
+        reply, message = ('Bad Gateway', 'Server cannot currently handle the request, try again later (heavy load)')
+    elif code == 503:
+        reply, message = ('Service Unavailable', 'Server cannot currently handle the request, try again later (downbooru)')
+    else:
+        reply, message = ('Unknown', 'Something went wrong')
+    return reply, message
