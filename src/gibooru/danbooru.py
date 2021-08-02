@@ -1,7 +1,7 @@
-from datetime import datetime
+from datetime import datetime, date
 from gibooru import Gibooru
-from typing import Optional, List
-from pydantic import BaseModel, HttpUrl, validator
+from typing import Optional, List, Literal
+from pydantic import BaseModel, HttpUrl, validator, PositiveInt
 from httpx import Response, URL
 import re
 
@@ -15,7 +15,7 @@ class Danbooru(Gibooru):
         self.page_urls_amount = 20
         super().__init__()
       
-    async def get_post(self, id: Optional[int] = None) -> Response:
+    async def get_post(self, id: Optional[PositiveInt] = None, md5: Optional[str] = None) -> Response:
         '''Searches for a single post from Danbooru
         
         Parameters
@@ -24,16 +24,20 @@ class Danbooru(Gibooru):
             The id of the post, if not given a random post will be found
         '''
 
-        endpoint = self.api_base + 'posts/'
+        endpoint = self.api_base + 'posts'
         if id:
-            endpoint += '{}'.format(id)
+            endpoint += '/{}'.format(id) + self.ext
+        elif md5:
+            endpoint += self.ext + '?md5={}'.format(md5)
         else:
-            endpoint += 'random'
-        endpoint += self.ext
+            endpoint += '/random' + self.ext
         self.last_query = endpoint
         return await self.client.get(endpoint)
 
-    async def get_posts(self, page: Optional[int] = 1, tags: Optional[str] = None) -> Response:
+    async def get_posts(self, 
+        page: Optional[PositiveInt] = None, 
+        tags: Optional[str] = None
+        ) -> Response:
         endpoint = self.api_base + 'posts' + self.ext + '?'
         data = {'page': page, 'tags': tags}
         params = {}
@@ -47,14 +51,14 @@ class Danbooru(Gibooru):
         return response
     
     async def search_tags(self,
-        page: Optional[int] = 1,
+        page: Optional[PositiveInt] = None,
         name: Optional[str] = None,
-        order: Optional[str] = 'date',
+        order: Optional[Literal['date', 'count', 'name']] = None,
         hide_empty: Optional[bool] = True,
-        category: Optional[int] = None,
+        category: Optional[Literal[0,1,3,4,5]] = None,
         has_artist: Optional[bool] = None,
         has_wiki_page: Optional[bool] = None
-        ):
+        ) -> Response:
         endpoint = self.api_base + 'tags' + self.ext + '?'
         data = {
             'commit': 'Search', 
@@ -76,11 +80,28 @@ class Danbooru(Gibooru):
         self.last_query = endpoint + query
         return response
 
+    async def explore(self, 
+        page: Optional[PositiveInt] = None,
+        date: Optional[date] = None,
+        option: Literal['popular', 'curated', 'viewed', 'searches', 'missed_searches'] = 'popular',
+        ) -> Response:
+        endpoint = self.api_base + 'explore/posts/' + option + self.ext + '?'
+        data = {'page': page, 'date': date}
+        params = {}
+        for k, v in data.items():
+            if v:
+                params[k] = v
+        response = await self.client.get(endpoint, params=params)
+        query = response.url.query.decode('utf-8')
+        if option == 'popular' or option == 'curated':
+            self.page_urls = self._update_urls(endpoint, query, page, self.page_urls_amount)
+        self.last_query = endpoint + query
+        return response
+
     def _update_urls(self, endpoint: str, query: str, base_page: int, pages: int) -> List[str]:
+        if not base_page:
+            base_page = 1
         return list(endpoint + re.sub('page=\d*&', 'page={}&'.format(page), query) for page in range(base_page, base_page+pages))
-
-    
-
 
 class DanbooruImage(BaseModel):
     id: int

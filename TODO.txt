@@ -1,0 +1,17 @@
+TODO:
+
+Implement abstract class methods
+Add validators
+
+Add Gelbooru, rule34, etc.
+
+Booru:
+Add common methods and variables
+Validate ext
+Let variables like page_urls_amount have setters, use property?
+
+Danbooru:
+Get comments
+
+Tests:
+Thorough enough?

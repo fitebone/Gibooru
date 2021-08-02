@@ -8,17 +8,24 @@ from gibooru import Danbooru
 import unittest
 
 class Test(unittest.IsolatedAsyncioTestCase):
-    # Get random post: /posts/random
+    # Get random post
     async def test_get_post_random(self):
         d = Danbooru()
         x = await d.get_post()
         await d.client.aclose()
         self.assertEqual(x.status_code, 200)
     
-    # Get specific post: /posts/{id}
+    # Get specific post by id
     async def test_get_post_id(self):
         d = Danbooru()
-        x = await d.get_post(4677555)
+        x = await d.get_post(id=4677555)
+        await d.client.aclose()
+        self.assertEqual(x.status_code, 200)
+    
+    # Get specific post by md5
+    async def test_get_post_md5(self):
+        d = Danbooru()
+        x = await d.get_post(md5='d1613e5f3730d85ea9ef92d813f4c431')
         await d.client.aclose()
         self.assertEqual(x.status_code, 200)
 
@@ -40,7 +47,6 @@ class Test(unittest.IsolatedAsyncioTestCase):
     async def test_search_tags(self):
         d = Danbooru()
         x = await d.search_tags()
-        print(d.page_urls)
         await d.client.aclose()
         self.assertEqual(x.status_code, 200)
 
@@ -48,7 +54,20 @@ class Test(unittest.IsolatedAsyncioTestCase):
     async def test_search_tags_query(self):
         d = Danbooru()
         x = await d.search_tags(page=2, name='*car*', order='count', category=1)
-        print(d.page_urls)
+        await d.client.aclose()
+        self.assertEqual(x.status_code, 200)
+
+    # Get explore no query
+    async def test_explore(self):
+        d = Danbooru()
+        x = await d.explore()
+        await d.client.aclose()
+        self.assertEqual(x.status_code, 200)
+    
+    # Get explore with query
+    async def test_explore_query(self):
+        d = Danbooru()
+        x = await d.explore(page=2, date='2021-01-05', option='curated')
         await d.client.aclose()
         self.assertEqual(x.status_code, 200)
     
