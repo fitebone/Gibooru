@@ -29,31 +29,31 @@ class Test(unittest.IsolatedAsyncioTestCase):
         await d.client.aclose()
         self.assertEqual(x.status_code, 200)
 
-    # Get posts no query
-    async def test_get_posts(self):
+    # Search posts no query
+    async def test_search_posts(self):
         d = Danbooru()
-        x = await d.get_posts()
+        x = await d.search_posts()
         await d.client.aclose()
         self.assertEqual(x.status_code, 200)
 
-    # Get posts with query
-    async def test_get_posts_query(self):
+    # Search posts with query
+    async def test_search_posts_query(self):
         d = Danbooru()
-        x = await d.get_posts(10, 'glasses')
+        x = await d.search_posts(10, 'glasses')
         await d.client.aclose()
         self.assertEqual(x.status_code, 200)
 
-    # Get tags no (base) query
+    # Search tags no (base) query
     async def test_search_tags(self):
         d = Danbooru()
         x = await d.search_tags()
         await d.client.aclose()
         self.assertEqual(x.status_code, 200)
 
-    # Get tags with query
+    # Search tags with query
     async def test_search_tags_query(self):
         d = Danbooru()
-        x = await d.search_tags(page=2, name='*car*', order='count', category=1)
+        x = await d.search_tags(page=2, name='*car*', order='count', hide_empty=True, category=0, has_artist=False, has_wiki_page=False)
         await d.client.aclose()
         self.assertEqual(x.status_code, 200)
 
@@ -68,6 +68,20 @@ class Test(unittest.IsolatedAsyncioTestCase):
     async def test_explore_query(self):
         d = Danbooru()
         x = await d.explore(page=2, date='2021-01-05', option='curated')
+        await d.client.aclose()
+        self.assertEqual(x.status_code, 200)
+
+    # Search artists no query
+    async def test_search_artists(self):
+        d = Danbooru()
+        x = await d.search_artists()
+        await d.client.aclose()
+        self.assertEqual(x.status_code, 200)
+
+    # Search artists with query
+    async def test_search_artists_query(self):
+        d = Danbooru()
+        x = await d.search_artists(page=2, name='*a*', url='*k*', order='post_count', has_tag=True, is_banned=False, is_deleted=False)
         await d.client.aclose()
         self.assertEqual(x.status_code, 200)
     

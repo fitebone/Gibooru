@@ -5,6 +5,50 @@ from pydantic import BaseModel, HttpUrl, validator, PositiveInt
 from httpx import Response, URL
 import re
 
+'''
+https://danbooru.donmai.us/wiki_pages/help%3Ausers
+Anonymous:
+Search 2 tags
+Browse 1000 pages in a search
+
+Maximum limit of results to return per page:
+200 for /posts.json, 1000 for everything else
+
+Common Parameters:
+page
+limit
+search[id]
+search[created_at]
+search[updated_at]
+search[order]?
+
+Numeric search parameters support ranges:
+100
+>100
+>=100
+<100
+<=100
+100,200,300
+100..200 (inclusive)
+
+Date parameters support ranges:
+2012-01-01
+>2012-01-01
+>=2012-01-01
+<2012-01-01
+<=2012-01-01
+2012-01-01,2012-01-02
+2012-01-01..2013-01-01 (inclusive)
+
+Boolean parameters accept any of the following values for true or false:
+True: true, t, yes, y, on, 1
+False: false, f, no, n, off, 0
+
+Most string parameters support using asterisks (*) as wildcards. 
+Wildcards can be escaped with \*. 
+Literal backslashes can be escaped with \\.
+'''
+
 class Danbooru(Gibooru):
     '''Danbooru API client'''
     def __init__(self):
@@ -15,7 +59,10 @@ class Danbooru(Gibooru):
         self.page_urls_amount = 20
         super().__init__()
       
-    async def get_post(self, id: Optional[PositiveInt] = None, md5: Optional[str] = None) -> Response:
+    async def get_post(self, 
+        id: Optional[PositiveInt] = None, 
+        md5: Optional[str] = None
+        ) -> Response:
         '''Searches for a single post from Danbooru
         
         Parameters
@@ -34,7 +81,7 @@ class Danbooru(Gibooru):
         self.last_query = endpoint
         return await self.client.get(endpoint)
 
-    async def get_posts(self, 
+    async def search_posts(self, 
         page: Optional[PositiveInt] = None, 
         tags: Optional[str] = None
         ) -> Response:
@@ -54,7 +101,7 @@ class Danbooru(Gibooru):
         page: Optional[PositiveInt] = None,
         name: Optional[str] = None,
         order: Optional[Literal['date', 'count', 'name']] = None,
-        hide_empty: Optional[bool] = True,
+        hide_empty: Optional[bool] = None,
         category: Optional[Literal[0,1,3,4,5]] = None,
         has_artist: Optional[bool] = None,
         has_wiki_page: Optional[bool] = None
@@ -69,6 +116,36 @@ class Danbooru(Gibooru):
             'search[category]': category,
             'search[has_artist]': has_artist,
             'search[has_wiki_page]': has_wiki_page,
+            }
+        params = {}
+        for k, v in data.items():
+            if v:
+                params[k] = v
+        response = await self.client.get(endpoint, params=params)
+        query = response.url.query.decode('utf-8')
+        self.page_urls = self._update_urls(endpoint, query, page, self.page_urls_amount)
+        self.last_query = endpoint + query
+        return response
+
+    async def search_artists(self,
+        page: Optional[PositiveInt] = None,
+        name: Optional[str] = None,
+        url: Optional[str] = None,
+        order: Optional[Literal['name', 'updated_at', 'post_count']] = None,
+        has_tag: Optional[bool] = None,
+        is_banned: Optional[bool] = None,
+        is_deleted: Optional[bool] = None,
+        ) -> Response:
+        endpoint = self.api_base + 'artists' + self.ext + '?'
+        data = {
+            'commit': 'Search', 
+            'page': page, 
+            'search[any_name_matches]': name,
+            'search[url_matches]': url, 
+            'search[order]': order, 
+            'search[has_tag]': has_tag,
+            'search[is_banned]': is_banned,
+            'search[is_deleted]': is_deleted,
             }
         params = {}
         for k, v in data.items():
@@ -103,6 +180,7 @@ class Danbooru(Gibooru):
             base_page = 1
         return list(endpoint + re.sub('page=\d*&', 'page={}&'.format(page), query) for page in range(base_page, base_page+pages))
 
+# Needed?
 class DanbooruImage(BaseModel):
     id: int
     created_at: datetime
@@ -169,6 +247,8 @@ class DanbooruImage(BaseModel):
     )
     def check_tags(cls, v):
         return v.split(' ')
+
+
 
 # Utility Methods
 def handle_response_code(self, code: int):
