@@ -9,8 +9,10 @@ Making sure that we *gib* access to all the boorus!
 - [ ] Generalize APIs after they are robust (using abstract base classes & methods)
 - [ ] Add pydantic validators 
 - [ ] Add pythonic properties
+- [ ] Add sync support
 - [ ] Only add possible pages that exist to page_urls
 - [ ] **Danbooru**: Add common API search params to methods
+- [ ] **Danbooru**: Add basic metatag stuff
 
 ## In Progress
 

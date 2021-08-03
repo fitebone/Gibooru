@@ -56,9 +56,19 @@ class Danbooru(Gibooru):
         self.ext = '.json'
         self.page_urls = []
         self.last_query = ''
-        self.page_urls_amount = 20
+        #self.page_urls_amount = 20 Reliant on limit and maximum pages searchable
         super().__init__()
-      
+    
+    async def _get_count(self, query: str) -> int:
+        endpoint = self.api_base + 'counts/posts.json?' + query
+        response = await self.client.get(endpoint)
+        return response.json()['counts']['posts']
+
+    def _update_urls(self, endpoint: str, query: str, base_page: int, pages: int) -> List[str]:
+        if not base_page:
+            base_page = 1
+        return list(endpoint + re.sub('page=\d*&', f'page={page}&', query) for page in range(base_page, base_page+pages))
+
     async def get_post(self, 
         id: Optional[PositiveInt] = None, 
         md5: Optional[str] = None
@@ -73,9 +83,9 @@ class Danbooru(Gibooru):
 
         endpoint = self.api_base + 'posts'
         if id:
-            endpoint += '/{}'.format(id) + self.ext
+            endpoint += f'/{id}' + self.ext
         elif md5:
-            endpoint += self.ext + '?md5={}'.format(md5)
+            endpoint += self.ext + f'?md5={md5}'
         else:
             endpoint += '/random' + self.ext
         self.last_query = endpoint
@@ -93,7 +103,8 @@ class Danbooru(Gibooru):
                 params[k] = v
         response = await self.client.get(endpoint, params=params)
         query = response.url.query.decode('utf-8')
-        self.page_urls = self._update_urls(endpoint, query, page, self.page_urls_amount)
+
+        #self.page_urls = self._update_urls(endpoint, query, page, self.page_urls_amount)
         self.last_query = endpoint + query
         return response
     
@@ -123,7 +134,7 @@ class Danbooru(Gibooru):
                 params[k] = v
         response = await self.client.get(endpoint, params=params)
         query = response.url.query.decode('utf-8')
-        self.page_urls = self._update_urls(endpoint, query, page, self.page_urls_amount)
+        #self.page_urls = self._update_urls(endpoint, query, page, self.page_urls_amount)
         self.last_query = endpoint + query
         return response
 
@@ -153,7 +164,7 @@ class Danbooru(Gibooru):
                 params[k] = v
         response = await self.client.get(endpoint, params=params)
         query = response.url.query.decode('utf-8')
-        self.page_urls = self._update_urls(endpoint, query, page, self.page_urls_amount)
+        #self.page_urls = self._update_urls(endpoint, query, page, self.page_urls_amount)
         self.last_query = endpoint + query
         return response
 
@@ -174,11 +185,6 @@ class Danbooru(Gibooru):
             self.page_urls = self._update_urls(endpoint, query, page, self.page_urls_amount)
         self.last_query = endpoint + query
         return response
-
-    def _update_urls(self, endpoint: str, query: str, base_page: int, pages: int) -> List[str]:
-        if not base_page:
-            base_page = 1
-        return list(endpoint + re.sub('page=\d*&', 'page={}&'.format(page), query) for page in range(base_page, base_page+pages))
 
 # Needed?
 class DanbooruImage(BaseModel):
@@ -284,3 +290,28 @@ def handle_response_code(self, code: int):
     else:
         reply, message = ('Unknown', 'Something went wrong')
     return reply, message
+
+
+danbooru_number_regex = '((<=?\d+)|(>=?\d+)|(\d+\.\.\.?\d+)|(\.\.\d+)|(\d+\.\.)|((?:\d+,?)+))+?'
+# Really needed? idk
+class DanbooruNumber(str):
+    @classmethod
+    def __get_validators__(cls):
+        yield cls.validate
+    
+    @classmethod
+    def __modify_schema__(cls, field_schema):
+        field_schema.update(
+            pattern=danbooru_number_regex,
+            examples=['100', '100,200,300', '<100', '<=100', '>100', '>=100', '100..200', '100...200', '..100', '100..']
+        )
+    
+    @classmethod
+    def validate(cls, v):
+        if not isinstance(v, str):
+            raise TypeError('String required')
+        m = re.search(danbooru_number_regex, v)
+        if not m:
+            raise ValueError('Invalid Danbooru number format')
+        # Intervals only work low to high, check?
+        return cls(f'{m.group()}')
