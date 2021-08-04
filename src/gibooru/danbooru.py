@@ -11,6 +11,27 @@ Anonymous:
 Search 2 tags
 Browse 1000 pages in a search
 
+Member:
+Favorite 10k posts
+3 Favorite groups
+
+Gold:
+Search 6 tags
+Browse 2000 pages in a search
+View censored tags (loli, shota, etc)
+Favorite 20k posts
+5 Favorite groups
+
+Plat:
+Search 12 tags
+Browse 5000 pages in a search
+Favorite unlimited posts
+10 Favorite groups
+
+Builder:
+Search unlimited tags
+Unlimited Favorite groups
+
 Maximum limit of results to return per page:
 200 for /posts.json, 1000 for everything else
 
@@ -56,13 +77,16 @@ class Danbooru(Gibooru):
         self.ext = '.json'
         self.page_urls = []
         self.last_query = ''
+        self.limit = 200
         #self.page_urls_amount = 20 Reliant on limit and maximum pages searchable
         super().__init__()
     
-    async def _get_count(self, query: str) -> int:
+    async def _get_count(self, query: str) -> tuple:
         endpoint = self.api_base + 'counts/posts.json?' + query
         response = await self.client.get(endpoint)
-        return response.json()['counts']['posts']
+        post_count = response.json()['counts']['posts']
+        page_count = post_count // self.limit
+        return post_count, page_count
 
     def _update_urls(self, endpoint: str, query: str, base_page: int, pages: int) -> List[str]:
         if not base_page:
@@ -107,7 +131,7 @@ class Danbooru(Gibooru):
         #self.page_urls = self._update_urls(endpoint, query, page, self.page_urls_amount)
         self.last_query = endpoint + query
         return response
-    
+
     async def search_tags(self,
         page: Optional[PositiveInt] = None,
         name: Optional[str] = None,

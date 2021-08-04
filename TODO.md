@@ -13,6 +13,8 @@ Making sure that we *gib* access to all the boorus!
 - [ ] Only add possible pages that exist to page_urls
 - [ ] **Danbooru**: Add common API search params to methods
 - [ ] **Danbooru**: Add basic metatag stuff
+- [ ] Add HTTP/2 and QUIC support
+
 
 ## In Progress
 

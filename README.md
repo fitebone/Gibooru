@@ -1,6 +1,6 @@
 # Gibooru
 
-A package that *gibs* you access to many booru-esque site APIs
+A python package that *gibs* you access to many booru site APIs
 
 Extreme WIP, lots of progress every day.
 
