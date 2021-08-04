@@ -81,6 +81,15 @@ class Danbooru(Gibooru):
         #self.page_urls_amount = 20 Reliant on limit and maximum pages searchable
         super().__init__()
     
+    def _authenticate(self, params: dict):
+        _dict = params
+        if self.authentication:
+            _dict = {**_dict, **self.authentication}
+        return _dict
+    
+    async def _close(self):
+        await self.client.aclose()
+
     async def _get_count(self, query: str) -> tuple:
         endpoint = self.api_base + 'counts/posts.json?' + query
         response = await self.client.get(endpoint)
@@ -122,6 +131,7 @@ class Danbooru(Gibooru):
         endpoint = self.api_base + 'posts' + self.ext + '?'
         data = {'page': page, 'tags': tags}
         params = {}
+        params = self._authenticate(params)
         for k, v in data.items():
             if v:
                 params[k] = v
@@ -153,6 +163,7 @@ class Danbooru(Gibooru):
             'search[has_wiki_page]': has_wiki_page,
             }
         params = {}
+        params = self._authenticate(params)
         for k, v in data.items():
             if v:
                 params[k] = v
@@ -183,6 +194,7 @@ class Danbooru(Gibooru):
             'search[is_deleted]': is_deleted,
             }
         params = {}
+        params = self._authenticate(params)
         for k, v in data.items():
             if v:
                 params[k] = v
@@ -200,6 +212,7 @@ class Danbooru(Gibooru):
         endpoint = self.api_base + 'explore/posts/' + option + self.ext + '?'
         data = {'page': page, 'date': date}
         params = {}
+        params = self._authenticate(params)
         for k, v in data.items():
             if v:
                 params[k] = v
