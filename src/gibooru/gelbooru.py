@@ -1,42 +1,34 @@
 from gibooru import Gibooru
 from httpx import Response
 from typing import List, Optional, Literal, Tuple
-from pydantic import PositiveInt
+from pydantic import PositiveInt, BaseModel, validator
 
 '''
 Max limit is 1000
-
-&api_key=API_KEY_HERE&user_id=USER_ID_HERE
-
 '''
 
 class Gelbooru(Gibooru):
     '''Gelbooru API client'''
-    def __init__(self, api_key: Optional[str] = None, user_id: Optional[str] = None):
+    def __init__(self, 
+        api_key: Optional[str] = None, 
+        user_id: Optional[str] = None,
+        limit: int = 100 # Gelbooru default, max 1000
+        ):
+        super().__init__(api_key=api_key, user_id=user_id, default_limit=limit, image_schema=GelbooruImage)
         self.api_base = 'https://gelbooru.com/index.php?'
-        self.last_query = ''
-        self.authentication = {'api_key': api_key, 'user_id': user_id}
-        self.limit = 100 # Gelbooru default
-        super().__init__()
-
-    def _authenticate(self, params: dict):
-        _dict = params
-        if self.authentication:
-            _dict = {**_dict, **self.authentication}
-        return _dict
-    
-    async def _close(self):
-        await self.client.aclose()
 
     async def get_random_post(self) -> Response:
+        '''
+        Gets a random post from Gelbooru
+        '''
         endpoint = self.api_base
         params = {'page': 'post', 's': 'random'}
         params = self._authenticate(params)
-        r = await self.client.get(endpoint, params=params)
+        r = await self._get(endpoint, params=params)
         id_ = r.url.query.decode('utf-8').split('=')[-1]
         params = {'page': 'dapi', 's': 'post', 'q': 'index', 'json': 1, 'id': id_}
         params = self._authenticate(params)
-        response = await self.client.get(endpoint, params=params)
+        response = await self._get(endpoint, params=params)
         query = response.url.query.decode('utf-8')
         self.last_query = endpoint + query
         return response
@@ -48,6 +40,9 @@ class Gelbooru(Gibooru):
         id: Optional[PositiveInt] = None,
         cid: Optional[PositiveInt] = None
         ) -> Response:
+        '''
+        Searches for Gelbooru posts
+        '''
         endpoint = self.api_base
         if not limit:
             limit = self.limit
@@ -66,8 +61,9 @@ class Gelbooru(Gibooru):
             if v:
                 params[k] = v
         params = self._authenticate(params)
-        response = await self.client.get(endpoint, params=params)
+        response = await self._get(endpoint, params=params)
         query = response.url.query.decode('utf-8')
+        self.page_urls = self._update_urls(endpoint, query, page)
         self.last_query = endpoint + query
         return response
 
@@ -82,6 +78,9 @@ class Gelbooru(Gibooru):
         order: Optional[Literal['asc', 'desc', 'ASC', 'DESC']] = None,
         orderby: Optional[Literal['date', 'count', 'name']] = None
         ) -> Response:
+        '''
+        Searches for Gelbooru tags
+        '''
         endpoint = self.api_base
         if not limit:
             limit = self.limit
@@ -104,8 +103,9 @@ class Gelbooru(Gibooru):
             if v:
                 params[k] = v
         params = self._authenticate(params)
-        response = await self.client.get(endpoint, params=params)
+        response = await self._get(endpoint, params=params)
         query = response.url.query.decode('utf-8')
+        #self.page_urls = self._update_urls(endpoint, query, page, self.amount_url_pages)
         self.last_query = endpoint + query
         return response
 
@@ -127,3 +127,44 @@ class Gelbooru(Gibooru):
 
     async def get_deleted_images(self, last_id: PositiveInt):
     '''
+
+class GelbooruImage(BaseModel):
+    '''
+    Representation of Gelbooru images
+    '''
+    source: Optional[str]
+    directory: str
+    hash: str
+    height: int
+    id: int
+    image: str
+    change: int
+    owner: str
+    parent_id: Optional[str]
+    rating: str
+    sample: int
+    preview_height: int
+    preview_width: int
+    sample_height: int
+    sample_width: int
+    score: int
+    tags: str
+    title: str
+    width: int
+    file_url: str
+    created_at: str
+    post_locked: int
+
+    def __str__(self):
+        return self.file_url
+
+    def __repr__(self) -> int:
+        return self.id
+
+    @validator('tags')
+    def check_tags(cls, v) -> List[str]:
+        return v.split(' ')
+
+    @property
+    def thumbnail(self) -> str:
+        return f'https://img3.gelbooru.com/thumbnails/{self.directory}/thumbnail_{self.hash}.jpg'
