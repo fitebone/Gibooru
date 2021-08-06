@@ -29,8 +29,7 @@ class Gelbooru(Gibooru):
         params = {'page': 'dapi', 's': 'post', 'q': 'index', 'json': 1, 'id': id_}
         params = self._authenticate(params)
         response = await self._get(endpoint, params=params)
-        query = response.url.query.decode('utf-8')
-        self.last_query = endpoint + query
+        self.last_search = str(response.url)
         return response
 
     async def search_posts(self,
@@ -62,9 +61,7 @@ class Gelbooru(Gibooru):
                 params[k] = v
         params = self._authenticate(params)
         response = await self._get(endpoint, params=params)
-        query = response.url.query.decode('utf-8')
-        self.page_urls = self._update_urls(endpoint, query, page)
-        self.last_query = endpoint + query
+        self._store_search_data(str(response.url), endpoint, params, page)
         return response
 
     async def search_tags(self,
@@ -104,9 +101,7 @@ class Gelbooru(Gibooru):
                 params[k] = v
         params = self._authenticate(params)
         response = await self._get(endpoint, params=params)
-        query = response.url.query.decode('utf-8')
-        #self.page_urls = self._update_urls(endpoint, query, page, self.amount_url_pages)
-        self.last_query = endpoint + query
+        self._store_search_data(str(response.url), endpoint, params, page)
         return response
 
     # API Not working for these?

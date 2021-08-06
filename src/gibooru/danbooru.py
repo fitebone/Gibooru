@@ -55,7 +55,7 @@ class Danbooru(Gibooru):
             endpoint += self.ext + f'?md5={md5}'
         else:
             endpoint += '/random' + self.ext
-        self.last_query = endpoint
+        self.last_search = endpoint
         return await self._get(endpoint)
 
     async def search_posts(self, 
@@ -79,9 +79,7 @@ class Danbooru(Gibooru):
             if v:
                 params[k] = v
         response = await self._get(endpoint, params=params)
-        query = response.url.query.decode('utf-8')
-        self.page_urls = self._update_urls(endpoint, query, page)
-        self.last_query = endpoint + query
+        self._store_search_data(str(response.url), endpoint, params, page)
         return response
 
     async def search_tags(self,
@@ -120,9 +118,7 @@ class Danbooru(Gibooru):
             if v:
                 params[k] = v
         response = await self._get(endpoint, params=params)
-        query = response.url.query.decode('utf-8')
-        self.page_urls = self._update_urls(endpoint, query, page)
-        self.last_query = endpoint + query
+        self._store_search_data(str(response.url), endpoint, params, page)
         return response
 
     async def search_artists(self,
@@ -161,8 +157,7 @@ class Danbooru(Gibooru):
             if v:
                 params[k] = v
         response = await self._get(endpoint, params=params)
-        query = response.url.query.decode('utf-8')
-        self.last_query = endpoint + query
+        self.last_search = str(response.url)
         return response
 
     async def explore_post(self, 
@@ -188,10 +183,9 @@ class Danbooru(Gibooru):
             if v:
                 params[k] = v
         response = await self._get(endpoint, params=params)
-        query = response.url.query.decode('utf-8')
         if option == 'popular' or option == 'curated': # Viewed doesnt have pages
-            self.page_urls = self._update_urls(endpoint, query, page)
-        self.last_query = endpoint + query
+            self.page_urls = self._update_urls(endpoint, params, page)
+        self.last_search = str(response.url)
         return response
     
     async def explore_tag(self,
@@ -206,8 +200,7 @@ class Danbooru(Gibooru):
         if date:
             params['date'] = date
         response = await self._get(endpoint, params=params)
-        query = response.url.query.decode('utf-8')
-        self.last_query = endpoint + query
+        self.last_search = str(response.url)
         return response
 
     @staticmethod

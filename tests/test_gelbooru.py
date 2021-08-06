@@ -101,7 +101,7 @@ class Test(unittest.IsolatedAsyncioTestCase):
         g = Gelbooru()
         r = await g.search_tags(names='moon smile')
         await g._close()
-        self.assertEqual(r.json()[0]['tag'], 'smile')
+        self.assertIn(r.json()[0]['tag'], ['smile', 'moon'])
         self.assertEqual(len(r.json()), 2)
 
     # Search tags with name pattern
