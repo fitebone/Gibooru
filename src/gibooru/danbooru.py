@@ -21,7 +21,7 @@ class Danbooru(Gibooru):
         api_key: Optional[str] = None,
         user_id: Optional[str] = None,
         limit: int = 20, # Danbooru default, max 200
-        response_extension: Literal['.json', '.html', '.xml', '.atom'] = '.json',
+        response_extension: Literal['.json', '.html', '.xml', '.atom'] = '.json'
         ):
         super().__init__(api_key=api_key, user_id=user_id, default_limit=limit, image_schema=DanbooruImage)
         self.api_base = 'https://danbooru.donmai.us/'

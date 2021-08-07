@@ -17,7 +17,7 @@ class Gibooru(ABC):
         user_id: Optional[str] = None, 
         default_limit: int = 100,
         image_schema: BaseModel = None,
-        sync: bool = False) -> NoReturn:
+        ) -> NoReturn:
         self._api_key = api_key
         self._user_id = user_id
         self._image_schema = image_schema
