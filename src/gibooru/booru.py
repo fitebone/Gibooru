@@ -16,8 +16,8 @@ class Gibooru(ABC):
         api_key: Optional[str] = None, 
         user_id: Optional[str] = None, 
         default_limit: int = 100,
-        image_schema: BaseModel = None
-        ) -> NoReturn:
+        image_schema: BaseModel = None,
+        sync: bool = False) -> NoReturn:
         self._api_key = api_key
         self._user_id = user_id
         self._image_schema = image_schema
@@ -104,7 +104,7 @@ class Gibooru(ABC):
             for i in range(len(page_posts)):
                 posts.append(page_posts[i])
         return posts
-    
+
     async def pages_to_images(self, thumbnail: bool = False) -> List[Tuple[bytes, str]]:
         '''
         Gets a list of byte data representations of the posts from the last query

@@ -13,7 +13,7 @@ class Gelbooru(Gibooru):
     def __init__(self, 
         api_key: Optional[str] = None, 
         user_id: Optional[str] = None,
-        limit: int = 100 # Gelbooru default, max 1000
+        limit: int = 100, # Gelbooru default, max 1000
         ):
         super().__init__(api_key=api_key, user_id=user_id, default_limit=limit, image_schema=GelbooruImage)
         self.api_base = 'https://gelbooru.com/index.php?'
