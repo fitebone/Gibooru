@@ -95,7 +95,7 @@ class Test(unittest.IsolatedAsyncioTestCase):
     # Search artists with query
     async def test_search_artists_query(self):
         d = Danbooru()
-        r = await d.search_artists(page=2, limit=10, name='*a*', url='*k*', order='post_count', has_tag=True, is_banned=False, is_deleted=False)
+        r = await d.search_artists(page=1, limit=10, name='*a*', url='*k*', order='post_count', has_tag=True, is_banned=False, is_deleted=False)
         await d._close()
         self.assertEqual(len(r.json()), 10)
 
@@ -109,9 +109,9 @@ class Test(unittest.IsolatedAsyncioTestCase):
     # Get explore post with limit
     async def test_explore_post_popular(self):
         d = Danbooru()
-        r = await d.explore_post(limit=1000)
+        r = await d.explore_post(limit=200)
         await d._close()
-        self.assertEqual(len(r.json()), 1000)
+        self.assertEqual(len(r.json()), 200)
     
     # Get explore post with query
     async def test_explore_post_curated(self):

@@ -4,6 +4,7 @@ from typing import List, Optional, Literal, Tuple
 from pydantic import PositiveInt, BaseModel, validator
 
 '''
+Default is 100 results per page
 Max limit is 1000
 '''
 
@@ -104,24 +105,7 @@ class Gelbooru(Gibooru):
         self._store_search_data(str(response.url), endpoint, params, page)
         return response
 
-    # API Not working for these?
-    '''
-    async def get_comment(self, id: PositiveInt):
-        endpoint = self.api_base
-        params = {
-            'page': 'dapi',
-            's': 'comment',
-            'q': 'index',
-            'post_id': id
-        }
-        params = self._authenticate(params)
-        response = await self.client.get(endpoint, params=params)
-        query = response.url.query.decode('utf-8')
-        self.last_query = endpoint + query
-        return response
-
-    async def get_deleted_images(self, last_id: PositiveInt):
-    '''
+    # Comment and deleted_images API not working on server side...
 
 class GelbooruImage(BaseModel):
     '''

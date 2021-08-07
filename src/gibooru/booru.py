@@ -1,10 +1,11 @@
 import gibooru
 import httpx
-from typing import List, Optional, NoReturn
+from typing import List, Optional, NoReturn, Tuple
 from abc import ABC
 from pydantic import BaseModel
-import re
+import base64
 
+# Should probably implement ABC somehow
 class Gibooru(ABC):
     '''
     Base class to access Booru APIs
@@ -25,7 +26,7 @@ class Gibooru(ABC):
         self._default_limit = default_limit # Number of items per page of data
         self._page_urls = [] # List of urls for pages of 'limit' amount of content from the booru
         self._num_page_urls = 100 # Alotted size of the list '_page_urls'
-        self.client = httpx.AsyncClient()
+        self.client = httpx.AsyncClient(http2=True)
     
     def _authenticate(self, params: dict) -> dict:
         '''
@@ -37,12 +38,23 @@ class Gibooru(ABC):
         return _dict
     
     async def _close(self):
+        '''
+        Close the httpx client
+        '''
         await self.client.aclose()
 
     async def _get(self, endpoint: str, params: Optional[dict] = None) -> httpx.Response:
+        '''
+        Httpx client get using a url (endpoint) and parameters
+        '''
         return await self.client.get(endpoint, params=params)
 
     def _update_urls(self, endpoint: str, params: str, base_page: int) -> List[str]:
+        '''
+        Returns a list of page urls using the specified endpoint and params
+
+        Pages range from base_page to (base_page + num_page_urls)
+        '''
         posts = []
         if not base_page:
             base_page = 1
@@ -61,27 +73,39 @@ class Gibooru(ABC):
         return posts
 
     def _store_search_data(self, search: str, endpoint: str, params: dict, page: int):
+        '''
+        Updates Gibooru variables based on last query
+
+        Used only after queries that result in pages of data
+        '''
         self.page_urls = self._update_urls(endpoint, params, page)
         self.last_search = search
         self.last_params = params
 
-    async def pages_to_posts(self) -> List:
+    async def pages_to_json(self) -> List[Optional[dict]]:
+        '''
+        Gets a list of json representations of the pages from the last query
+        '''
+        jsons = []
+        for page in self._page_urls:
+            response = await self._get(page)
+            json = self.response_to_json(response)
+            jsons.append(json)
+        return jsons
+
+    async def pages_to_posts(self) -> List[Optional[dict]]:
         '''
         Gets a list of <Booru>Image(s) representations of the posts from the last query
         '''
         posts = []
-        limit = self._default_limit
-        if 'limit' in self.last_params:
-            limit = self.last_params['limit']
         for page in self._page_urls:
             response = await self._get(page)
-            json = response.json()
-            for i in range(limit):
-                if 0 <= i < len(json):
-                    posts.append(self._image_schema(**json[i]))
+            page_posts = self.response_to_posts(response)
+            for i in range(len(page_posts)):
+                posts.append(page_posts[i])
         return posts
     
-    async def pages_to_images(self, thumbnail: bool = False) -> List[bytes]:
+    async def pages_to_images(self, thumbnail: bool = False) -> List[Tuple[bytes, str]]:
         '''
         Gets a list of byte data representations of the posts from the last query
 
@@ -95,24 +119,55 @@ class Gibooru(ABC):
                 r = await self._get(post.thumbnail)
             else:
                 r = await self._get(post.file_url)
-            image_data.append(r.content)
+            data = base64.b64decode(r.content)
+            ext = post.file_url.split('.')[-1]
+            image_data.append((data, ext))
         return image_data
 
-    @staticmethod
-    def response_to_json(self, response: httpx.Response) -> List[Optional[dict]]:
+    # Could be static I guess
+    def response_to_json(self, response: httpx.Response) -> Tuple[List[Optional[dict]], bool]:
         '''
         Converts a response with json content into a pythonic json object
         '''
         json = []
+        valid = True
         try:
             json = response.json()
-        except Exception as esc:
-            print(esc)
-        return json
+        except Exception:
+            print('Not a valid JSON response')
+            valid = False
+        return json, valid
     
-    '''@staticmethod
-    def response_to_booruimage(self, response: httpx.Response) -> List[Optional[dict]]:
-        json = response.json()'''
+    def response_to_posts(self, response: httpx.Response) -> List[Optional[dict]]:
+        '''
+        Converts a response with json content into a list of Booru post representations
+
+        Each <Booru>Image class is unique to their unique API responses
+        '''
+        json, valid = self.response_to_json(response)
+        posts = []
+        if valid:
+            for i in range(len(json)):
+                posts.append(self._image_schema(**json[i]))
+        return posts
+
+    async def response_to_images(self, response: httpx.Response, thumbnail: bool = False) -> List[bytes]:
+        '''
+        Converts a response with json content into list of image byte data
+        '''
+        posts = self.response_to_posts(response)
+        image_data = []
+        if len(posts) > 0:
+            for post in posts:
+                r = None
+                if thumbnail:
+                    r = await self._get(post.thumbnail)
+                else:
+                    r = await self._get(post.file_url)
+                data = base64.b64decode(r.content)
+                ext = post.file_url.split('.')[-1]
+                image_data.append((data, ext))
+        return image_data
 
     @property
     def last_search(self):

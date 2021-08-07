@@ -134,13 +134,6 @@ class Test(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(r.json()[0]['tag'], 'reiko_kato')
 
     # Search comment API broken
-    '''
-    async def test_get_comment(self):
-        g = Gelbooru()
-        r = await g.search_tags(id=6969)
-        await g._close()
-        self.assertEqual(len(r.json()), 100)
-    '''
     
 if __name__ == '__main__':
     unittest.main()

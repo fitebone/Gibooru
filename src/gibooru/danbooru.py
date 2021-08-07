@@ -5,12 +5,12 @@ from pydantic import BaseModel, validator, PositiveInt
 from httpx import Response, URL
 
 '''
+Default is 20 results per page
+Max limit is 200 for /posts.json, 1000 for everything else
+
 Anonymous:
 Search 2 tags
 Browse 1000 pages in a search
-
-Maximum limit of results to return per page:
-200 for /posts.json, 1000 for everything else
 
 Reads are not rate limited
 '''
