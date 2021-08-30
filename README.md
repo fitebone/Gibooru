@@ -10,7 +10,4 @@ A python package that asynchronously *gibs* you access to booru site posts and d
 * **New Boorus**
 * Sync support if it is requested
 
-### P.S.
-This is a WIP if you couldn't already tell. Please email me with any questions or concerns.
-
 *Heavily inspired and influenced by [pybooru](https://github.com/LuqueDaniel/pybooru) and its async WIP [pybooru](https://github.com/onirei/pybooru)*
